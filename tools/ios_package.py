@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Package a built iPhone/iPad app and write its SHA-256 checksum."""
+"""Package a built iPhone/iPad or Apple TV app and write its SHA-256 checksum."""
 import argparse
 import hashlib
 from pathlib import Path
@@ -8,18 +8,22 @@ import subprocess
 import zipfile
 
 
-def package(app, output, require_unsigned=False):
+def package(app, output, require_unsigned=False, personal_game_data=False):
     app = app.resolve()
     with (app/'Info.plist').open('rb') as file:
         info = plistlib.load(file)
-    if info.get('CFBundleSupportedPlatforms') != ['iPhoneOS']:
-        raise ValueError('Only an iPhoneOS device app can be packaged as an IPA')
+    if info.get('CFBundleSupportedPlatforms') not in (['iPhoneOS'], ['AppleTVOS']):
+        raise ValueError('Only an iPhoneOS or AppleTVOS device app can be packaged as an IPA')
     if info.get('CFBundleExecutable') != 'HaloCE' or not (app/'HaloCE').is_file():
         raise ValueError('Not a complete HaloCE.app')
     files = sorted(p for p in app.rglob('*') if p.is_file())
-    forbidden = {'.map', '.iso', '.xiso', '.p12', '.p8'}
+    forbidden = {'.iso', '.xiso', '.p12', '.p8'}
+    if not personal_game_data:
+        forbidden.add('.map')
     if any(p.suffix.lower() in forbidden or p.is_symlink() for p in files):
         raise ValueError('Refusing to package game data, private keys, or symlinks')
+    if personal_game_data:
+        print('warning: this IPA contains your Halo maps; sideload it yourself, never publish it')
     if require_unsigned:
         if any(p.suffix == '.mobileprovision' or '_CodeSignature' in p.parts for p in files):
             raise ValueError('Public unsigned packages must not contain signing material')
@@ -40,5 +44,7 @@ if __name__ == '__main__':
     parser.add_argument('app', type=Path)
     parser.add_argument('output', type=Path)
     parser.add_argument('--require-unsigned', action='store_true')
+    parser.add_argument('--personal-game-data', action='store_true',
+                        help='allow bundled .map files (tvOS --maps builds); the IPA is for your own device only')
     args = parser.parse_args()
-    package(args.app, args.output, args.require_unsigned)
+    package(args.app, args.output, args.require_unsigned, args.personal_game_data)

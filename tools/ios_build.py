@@ -99,6 +99,7 @@ def main():
     if args.ipa:
         command = [sys.executable, 'tools/ios_package.py', app, args.ipa.resolve()]
         if args.unsigned: command.append('--require-unsigned')
+        if args.maps: command.append('--personal-game-data')
         run(*command)
 
 if __name__=='__main__':main()
