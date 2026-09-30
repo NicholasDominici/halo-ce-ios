@@ -10,8 +10,12 @@ with you.
 I inspected the public client and found the `halo-reliable-v1` and
 `halo-unreliable-v1` DataChannels, signaling protocol 1, and the WASM network
 ingress. I decoded its 12-byte frame header and wrote a small codec with an
-offline parser probe against the public binary. I propose carrying the game’s
-existing action/connection packets through a compatible native transport.
+offline parser probe against the public binary. I now have a native WebRTC
+prototype passing packet-delivery tests in both directions between an iPad
+simulator and our browser fixture, through the same Winsock bridge Halo uses.
+It checks UDP, segmented TCP streams and close/EOF; it does not yet prove that
+our engines can play together. I propose testing the game’s existing
+action/connection packets through that transport with you.
 
 Could we exchange:
 

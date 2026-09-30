@@ -37,6 +37,7 @@ def main():
     parser.add_argument('--llvm', default='/opt/homebrew/opt/llvm')
     parser.add_argument('--lld', default='/opt/homebrew/opt/lld/bin/ld.lld')
     parser.add_argument('--jobs', type=int, default=min(12,os.cpu_count() or 4))
+    parser.add_argument('--web-transport', action='store_true', help='compile the experimental WebRTC socket adapter; does not activate crossplay')
     args = parser.parse_args()
     if platform.system() != 'Darwin' or platform.machine() != 'arm64':
         parser.error('an Apple Silicon Mac with full Xcode is required')
@@ -50,6 +51,8 @@ def main():
         parser.error('--bundle-id must be a reverse-DNS identifier (e.g. com.example.halo)')
     if args.jobs < 1:
         parser.error('--jobs must be positive')
+    if args.web_transport:
+        run(sys.executable,'tools/web_transport_build.py','--prepare-only')
     include=ROOT/'build/ios/gl_include'
     for name,(registry,revision,source) in HEADERS.items():
         target=include/name;target.parent.mkdir(parents=True,exist_ok=True)
@@ -77,7 +80,8 @@ def main():
     sdk='iphonesimulator' if args.simulator else 'iphoneos'
     command=['cmake','-S','port/ios','-B',build,'-G','Xcode','-DCMAKE_SYSTEM_NAME=iOS',
              f'-DCMAKE_OSX_SYSROOT={sdk}','-DCMAKE_OSX_ARCHITECTURES=arm64','-DCMAKE_OSX_DEPLOYMENT_TARGET=16.0',
-             f'-DHALO_BUNDLE_IDENTIFIER={args.bundle_id}', f'-DHALO_DEVELOPMENT_TEAM={args.team or ""}']
+             f'-DHALO_BUNDLE_IDENTIFIER={args.bundle_id}', f'-DHALO_DEVELOPMENT_TEAM={args.team or ""}',
+             f'-DHALO_ENABLE_WEBRTC={"ON" if args.web_transport else "OFF"}']
     run(*command)
     command=['cmake','--build',build,'--config','Release','--target','HaloCE','--','-quiet']
     if args.simulator or args.unsigned:command.append('CODE_SIGNING_ALLOWED=NO')

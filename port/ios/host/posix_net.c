@@ -75,4 +75,57 @@ static ssize_t ios_getrandom(void *p,size_t size,unsigned flags) {(void)flags;ar
 #define getsockname ios_getsockname
 #define getpeername ios_getpeername
 #define getrandom ios_getrandom
+#ifdef HALO_ENABLE_WEBRTC
+#include "../../web/posix_bridge.h"
+#define posix_socket bsd_posix_socket
+#define posix_socket_close bsd_posix_socket_close
+#define posix_socket_bind bsd_posix_socket_bind
+#define posix_socket_connect bsd_posix_socket_connect
+#define posix_socket_listen bsd_posix_socket_listen
+#define posix_socket_accept bsd_posix_socket_accept
+#define posix_socket_send bsd_posix_socket_send
+#define posix_socket_sendto bsd_posix_socket_sendto
+#define posix_socket_recv bsd_posix_socket_recv
+#define posix_socket_recvfrom bsd_posix_socket_recvfrom
+#define posix_socket_shutdown bsd_posix_socket_shutdown
+#define posix_socket_set_nonblocking bsd_posix_socket_set_nonblocking
+#define posix_socket_bytes_available bsd_posix_socket_bytes_available
+#define posix_socket_setsockopt bsd_posix_socket_setsockopt
+#define posix_socket_getsockopt bsd_posix_socket_getsockopt
+#define posix_socket_getsockname bsd_posix_socket_getsockname
+#define posix_socket_getpeername bsd_posix_socket_getpeername
+#define posix_socket_select bsd_posix_socket_select
+#define posix_local_ipv4_address bsd_posix_local_ipv4_address
+#endif
 #include "../../linux/src/posix_net.c"
+#ifdef HALO_ENABLE_WEBRTC
+#undef posix_socket
+#undef posix_socket_close
+#undef posix_socket_bind
+#undef posix_socket_connect
+#undef posix_socket_listen
+#undef posix_socket_accept
+#undef posix_socket_send
+#undef posix_socket_sendto
+#undef posix_socket_recv
+#undef posix_socket_recvfrom
+#undef posix_socket_shutdown
+#undef posix_socket_set_nonblocking
+#undef posix_socket_bytes_available
+#undef posix_socket_setsockopt
+#undef posix_socket_getsockopt
+#undef posix_socket_getsockname
+#undef posix_socket_getpeername
+#undef posix_socket_select
+#undef posix_local_ipv4_address
+#undef socket
+#undef bind
+#undef connect
+#undef accept4
+#undef sendto
+#undef recvfrom
+#undef getsockname
+#undef getpeername
+#undef getrandom
+#include "../../web/posix_bridge.inc"
+#endif
