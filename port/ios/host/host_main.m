@@ -40,7 +40,13 @@ static uint32_t copy_string(const char *text) {
 int main(int argc,char **argv) {
     (void)argc;(void)argv;
     @autoreleasepool {
+#if TARGET_OS_TV
+        /* tvOS apps may only write to Caches (purgeable); the maps stay in the bundle. */
+        NSString *documents=[NSSearchPathForDirectoriesInDomains(NSCachesDirectory,NSUserDomainMask,YES).firstObject stringByAppendingPathComponent:@"Halo"];
+        [NSFileManager.defaultManager createDirectoryAtPath:documents withIntermediateDirectories:YES attributes:nil error:nil];
+#else
         NSString *documents=NSSearchPathForDirectoriesInDomains(NSDocumentDirectory,NSUserDomainMask,YES).firstObject;
+#endif
         snprintf(data_root,sizeof(data_root),"%s",documents.fileSystemRepresentation);
         snprintf(save_root,sizeof(save_root),"%s/save",data_root);mkdir(save_root,0755);
         chdir(data_root);
@@ -52,6 +58,8 @@ int main(int argc,char **argv) {
         host_install_signal_handlers();
         SDL_SetHint(SDL_HINT_ORIENTATIONS,"LandscapeLeft LandscapeRight");
         SDL_SetHint(SDL_HINT_JOYSTICK_ALLOW_BACKGROUND_EVENTS,"0");
+        /* Keep the Siri Remote out of the player ports; Halo needs a real controller. */
+        SDL_SetHint(SDL_HINT_TV_REMOTE_AS_JOYSTICK,"0");
         if(!SDL_Init(SDL_INIT_VIDEO|SDL_INIT_AUDIO|SDL_INIT_GAMEPAD))host_fatal("SDL initialization: %s",SDL_GetError());
         host_ios_touch_initialize();
         const SDL_DisplayMode *mode=SDL_GetDesktopDisplayMode(SDL_GetPrimaryDisplay());
