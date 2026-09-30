@@ -27,6 +27,10 @@ void host_exit(int code) __attribute__((noreturn));
 /* the host's errno on this thread, after a call to a host function */
 int host_errno(void);
 
+/* iOS matchmaking UI commands and guest-owned match status. */
+int host_matchmaking_command(char *invite, unsigned int size);
+void host_matchmaking_status(int state, int humans, int bots, const char *detail);
+
 /* ---------- threads
 
 The guest's thread pointer (its struct pthread) is kept by the host for

@@ -708,6 +708,10 @@ boolean display_vblank_deltas = FALSE;
 boolean display_precache_progress = FALSE;
 struct _screenshot_and_framerate_globals global_screenshot_count = { 0 };
 
+#ifdef HALO_IOS
+#include "../../port/ios/matchmaking.h"
+#endif
+
 /* ---------- public code */
 
 real main_get_seconds_elapsed(
@@ -3105,6 +3109,9 @@ void main_loop(
 
 	while (TRUE)
 	{
+#ifdef HALO_IOS
+		halo_ios_matchmaking_frame();
+#endif
 		if (!game_in_editor())
 		{
 			if (main_globals.switch_to_structure_bsp_index!=NONE)

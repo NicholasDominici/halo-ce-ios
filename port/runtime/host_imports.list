@@ -47,3 +47,5 @@ host_gl_fence_frame
 host_gl_wait_frame
 
 host_errno
+host_matchmaking_command
+host_matchmaking_status

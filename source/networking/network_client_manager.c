@@ -2139,6 +2139,34 @@ boolean network_game_client_initiate_join_game(
 	return success;
 }
 
+#ifdef HALO_IOS
+void halo_ios_client_counts(void *opaque,int *humans,int *bots) {
+    struct network_game_client *client=opaque;
+    int i;
+    *humans=*bots=0;
+    if(!client)return;
+    for(i=0;i<client->game.player_count;i++) {
+        struct network_player *player=&client->game.players[i];
+        /* Demo hosts reserve the last seven machine IDs for named bots. */
+        if((unsigned char)player->machine_index>=MAXIMUM_NETWORK_MACHINE_COUNT-7 &&
+           player->name[0]=='B' && player->name[1]=='O' && player->name[2]=='T' && player->name[3]=='-')(*bots)++;
+        else (*humans)++;
+    }
+}
+/* Called only after the authenticated invite's P2P peer is connected. */
+boolean halo_ios_client_join_address(struct network_game_client *client,unsigned long ip) {
+    struct network_advertised_game game={0};
+    struct network_join_parameters parameters={0};
+    struct transport_address address={0};
+    if(!client || client->state!=_network_game_client_state_searching)return FALSE;
+    game.platform=network_game_get_local_platform();
+    network_game_generate_join_game_token(parameters.join_token);
+    /* P2P returns network byte order; transport_address stores host order. */
+    address.address.long_words[0]=__builtin_bswap32(ip);address.port=NETWORK_GAME_SERVER_PORT;address.address_length=IPV4_ADDRESS_LENGTH;
+    return network_game_client_initiate_join_game(client,&game,&parameters,&address);
+}
+#endif
+
 void network_game_client_ponged(
 	struct network_game_client *client,
 	struct transport_address *source_address,
