@@ -1,6 +1,6 @@
 /* tvOS stand-ins for the iOS touch controls, orientation lock and XISO importer.
    Apple TV has no touch screen or Files app: the Siri Remote stands in for the
-   touch pad, and the maps ship inside the signed app bundle. */
+   touch pad, and the XISO arrives from a browser (host_tv_import.m). */
 #import <UIKit/UIKit.h>
 #include <SDL3/SDL.h>
 #include "ios_host.h"
@@ -111,9 +111,10 @@ int host_ios_gamepad_button(SDL_Gamepad *pad,int button) {
         (primary_hardware && SDL_GetGamepadButton(SDL_GetGamepadFromID(primary_hardware),button));
 }
 
-/* Maps normally stay in the read-only bundle, which host_main.m hands the game
-   as HALO_DISC_ROOT; tvOS forbids symlinking them into Caches. A complete
-   root/maps (e.g. from a future on-device import) takes precedence, matching
+/* The player's XISO is imported into root/maps over the local network
+   (host_tv_import.m). A personal build can instead bundle the maps, which
+   host_main.m hands the game as HALO_DISC_ROOT; tvOS forbids symlinking them
+   into Caches. A complete root/maps takes precedence, matching
    platform_translate_path in port/linux/src/xbox_files.c. */
 void host_ios_prepare_assets(const char *root) {
     NSString *imported=[[NSString stringWithUTF8String:root] stringByAppendingPathComponent:@"maps"];
@@ -125,5 +126,9 @@ void host_ios_prepare_assets(const char *root) {
             return;
         }
     }
-    host_fatal("This build has no usable Halo maps (%s). Rebuild with --maps pointing at maps extracted from your XISO.",reason);
+    /* Caches is purgeable, so this also runs again if tvOS evicted the maps. */
+    host_tv_import(root);
+    if(!xiso_maps_ready(imported.fileSystemRepresentation,reason,sizeof(reason)))
+        host_fatal("The imported maps are not usable (%s).",reason);
+    host_logf(HOST_LOG_INFO,"maps: %s",imported.fileSystemRepresentation);
 }

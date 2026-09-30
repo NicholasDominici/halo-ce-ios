@@ -36,7 +36,7 @@ def main():
     parser.add_argument('--tvos', action='store_true', help='build for Apple TV instead of iPhone/iPad')
     parser.add_argument('--render-height', type=int, default=1080,
                         help='tvOS: internal render height in pixels, 0 for native (default 1080)')
-    parser.add_argument('--maps', type=Path, help='tvOS: folder of .map files to bundle (tools/ios_extract_assets.py output/maps)')
+    parser.add_argument('--maps', type=Path, help='tvOS: bundle this folder of .map files for your own device (by default the app imports a XISO over the network)')
     parser.add_argument('--ipa', type=Path, help='also package the device app at this path')
     parser.add_argument('--llvm', default='/opt/homebrew/opt/llvm')
     parser.add_argument('--lld', default='/opt/homebrew/opt/lld/bin/ld.lld')
@@ -53,8 +53,6 @@ def main():
     args.bundle_id = args.bundle_id or ('org.haloce.tvos' if args.tvos else 'org.haloce.ios')
     if args.maps and not args.tvos:
         parser.error('--maps is only used for tvOS builds; iOS imports a XISO on the device')
-    if args.tvos and not args.maps:
-        print('warning: no --maps given; the Apple TV app will have no game data', file=sys.stderr)
     if args.maps and not (args.maps/'ui.map').is_file():
         parser.error(f'--maps {args.maps} has no ui.map; pass the maps folder from tools/ios_extract_assets.py')
     if not re.fullmatch(r'[A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)+', args.bundle_id):

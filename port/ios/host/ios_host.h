@@ -11,6 +11,8 @@ struct SDL_Window;
 struct SDL_Gamepad;
 void host_ios_touch_initialize(void);
 void host_ios_prepare_assets(const char *documents);
+/* tvOS: receive the player's XISO over the local network into <documents>/maps. */
+void host_tv_import(const char *documents);
 void host_ios_touch_attach(struct SDL_Window *window);
 void host_ios_touch_reset(void);
 int host_ios_gamepads(uint32_t *out, int capacity);
