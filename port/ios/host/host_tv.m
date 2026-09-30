@@ -11,7 +11,9 @@
    and swipes as keys. They drive a virtual "Halo Remote" gamepad that, like the
    iOS touch pad, owns player one (its buttons are only ever read through
    remote_read) and merges in the first hardware controller:
-   either can work the menus, and Menu backs out (B). */
+   either can work the menus, and Back backs out (B). The remote's keys are
+   consumed here: the game's keyboard mapping (xinput_sdl.c) would otherwise
+   also read Back, which SDL reports as Escape, as Start. */
 static SDL_Joystick *remote_joystick;
 static SDL_JoystickID remote_id, primary_hardware;
 /* Remote presses latch until the game reads them: a swipe's key down and up
@@ -35,10 +37,12 @@ static bool SDLCALL remote_event(void *userdata,SDL_Event *event) {
     (void)userdata;
     if(event->type!=SDL_EVENT_KEY_DOWN && event->type!=SDL_EVENT_KEY_UP)return true;
     int button=remote_button(event->key.scancode);
-    if(button<0 || event->key.repeat)return true;
-    remote_down[button]=event->key.down;
-    if(event->key.down)remote_latched[button]=true;
-    return true;
+    if(button<0)return true;
+    if(!event->key.repeat) {
+        remote_down[button]=event->key.down;
+        if(event->key.down)remote_latched[button]=true;
+    }
+    return false;
 }
 static bool remote_read(int button) {
     if(button<0 || button>=SDL_GAMEPAD_BUTTON_COUNT)return false;
@@ -61,7 +65,7 @@ void host_ios_touch_initialize(void) {
     if(!remote_joystick)host_fatal("Could not initialize remote controls: %s",SDL_GetError());
     SDL_SetJoystickVirtualAxis(remote_joystick,SDL_GAMEPAD_AXIS_LEFT_TRIGGER,-32768);
     SDL_SetJoystickVirtualAxis(remote_joystick,SDL_GAMEPAD_AXIS_RIGHT_TRIGGER,-32768);
-    SDL_AddEventWatch(remote_event,NULL);
+    SDL_SetEventFilter(remote_event,NULL);
 }
 void host_ios_touch_reset(void) {
     for(int i=0;i<SDL_GAMEPAD_BUTTON_COUNT;i++)remote_down[i]=remote_latched[i]=false;
