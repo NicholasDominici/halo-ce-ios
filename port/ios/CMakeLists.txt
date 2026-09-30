@@ -10,6 +10,13 @@ set(SDL_TESTS OFF CACHE BOOL "" FORCE)
 set(SDL_EXAMPLES OFF CACHE BOOL "" FORCE)
 add_subdirectory("${ROOT}/build/third_party/SDL3" sdl3 EXCLUDE_FROM_ALL)
 if(CMAKE_SYSTEM_NAME STREQUAL "tvOS")
+    # SDL's CMake forces SDL_OPENGLES off for tvOS, but its UIKit GL ES code is
+    # shared with iOS and tvOS still ships OpenGLES.framework (SDL's own Xcode
+    # config, SDL_build_config_ios.h, enables it). The sources are always
+    # compiled; only these macros gate them.
+    target_compile_definitions(SDL3-static PRIVATE SDL_VIDEO_OPENGL_ES=1 SDL_VIDEO_OPENGL_ES2=1)
+endif()
+if(CMAKE_SYSTEM_NAME STREQUAL "tvOS")
     # Controllers only, no Files app: maps are bundled (HALO_MAPS), see host/host_tv.m.
     set(HALO_TVOS ON)
     set(HALO_MAPS "" CACHE PATH "Folder of .map files extracted from the user's XISO")
