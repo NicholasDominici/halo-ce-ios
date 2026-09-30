@@ -152,17 +152,29 @@ const char *platform_save_root(void)
 	return root;
 }
 
+/* whether an Xbox path, after its drive, starts with the maps folder */
+static BOOL is_maps_path(const char *cursor)
+{
+	while (*cursor == '\\' || *cursor == '/')
+		cursor++;
+	return (cursor[0] | 0x20) == 'm' && (cursor[1] | 0x20) == 'a' && (cursor[2] | 0x20) == 'p' &&
+		(cursor[3] | 0x20) == 's' && (!cursor[4] || cursor[4] == '\\' || cursor[4] == '/');
+}
+
 void platform_translate_path(const char *xbox_path, char *host_path, unsigned long host_path_size)
 {
 	char resolved[1024];
 	const char *cursor = xbox_path;
+	const char *disc = getenv("HALO_DISC_ROOT");
 	unsigned long length;
+	BOOL drive_d = TRUE;
 
 	snprintf(resolved, sizeof(resolved), "%s", platform_data_root());
 	if (((cursor[0] >= 'a' && cursor[0] <= 'z') || (cursor[0] >= 'A' && cursor[0] <= 'Z')) && cursor[1] == ':')
 	{
 		char drive = (char)(cursor[0] | 0x20);
 
+		drive_d = drive == 'd';
 		if (drive != 'd')
 		{
 			struct posix_file_information information;
@@ -174,6 +186,11 @@ void platform_translate_path(const char *xbox_path, char *host_path, unsigned lo
 		}
 		cursor += 2;
 	}
+	/* HALO_DISC_ROOT (the Apple TV app bundle) supplies d:\maps when the
+	writable data root has none of its own; the game's other d:\ files, such
+	as debug.txt, stay in the data root, since the bundle is read-only */
+	if (drive_d && disc && *disc && is_maps_path(cursor) && !has_maps(platform_data_root()))
+		snprintf(resolved, sizeof(resolved), "%s", disc);
 
 	while (*cursor)
 	{

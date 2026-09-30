@@ -76,7 +76,12 @@ int main(int argc,char **argv) {
         snprintf(env_width,sizeof(env_width),"HALO_DISPLAY_WIDTH=%d",width);
         snprintf(env_pixel_width,sizeof(env_pixel_width),"HALO_DISPLAY_PIXEL_WIDTH=%d",pixel_width);
         snprintf(env_pixel_height,sizeof(env_pixel_height),"HALO_DISPLAY_PIXEL_HEIGHT=%d",pixel_height);
-        const char *env[]={env_data,env_save,env_width,env_pixel_width,env_pixel_height,"TZ=UTC0",NULL};
+        /* tvOS: d:\maps comes from the bundle (host_tv.m); the sandbox forbids linking it into Caches. */
+        char env_disc[1200]="HALO_DISC_ROOT=";
+#if TARGET_OS_TV
+        snprintf(env_disc,sizeof(env_disc),"HALO_DISC_ROOT=%s",NSBundle.mainBundle.resourcePath.fileSystemRepresentation);
+#endif
+        const char *env[]={env_data,env_save,env_width,env_pixel_width,env_pixel_height,env_disc,"TZ=UTC0",NULL};
         size_t env_count=sizeof(env)/sizeof(env[0]);
         uint32_t *environment=host_low_map(sizeof(uint32_t)*env_count,PROT_READ|PROT_WRITE);
         for(size_t i=0;i<env_count-1;i++)environment[i]=copy_string(env[i]);environment[env_count-1]=0;

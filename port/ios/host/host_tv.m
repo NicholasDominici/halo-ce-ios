@@ -6,7 +6,6 @@
 #include "ios_host.h"
 #include "xiso.h"
 #include <stdlib.h>
-#include <unistd.h>
 
 /* The Siri Remote isn't a joystick (host_main.m), so SDL delivers its presses
    and swipes as keys. They drive a virtual "Halo Remote" gamepad that, like the
@@ -112,18 +111,19 @@ int host_ios_gamepad_button(SDL_Gamepad *pad,int button) {
         (primary_hardware && SDL_GetGamepadButton(SDL_GetGamepadFromID(primary_hardware),button));
 }
 
-/* root is a writable Caches folder. Point root/maps at the bundle's maps; the
-   bundle path changes on every install, so the link is rebuilt each launch. */
+/* Maps normally stay in the read-only bundle, which host_main.m hands the game
+   as HALO_DISC_ROOT; tvOS forbids symlinking them into Caches. A complete
+   root/maps (e.g. from a future on-device import) takes precedence, matching
+   platform_translate_path in port/linux/src/xbox_files.c. */
 void host_ios_prepare_assets(const char *root) {
+    NSString *imported=[[NSString stringWithUTF8String:root] stringByAppendingPathComponent:@"maps"];
     NSString *bundled=[NSBundle.mainBundle.resourcePath stringByAppendingPathComponent:@"maps"];
-    NSString *maps=[[NSString stringWithUTF8String:root] stringByAppendingPathComponent:@"maps"];
-    NSFileManager *files=NSFileManager.defaultManager;
-    NSDictionary *existing=[files attributesOfItemAtPath:maps error:nil];
-    if(existing && [existing.fileType isEqualToString:NSFileTypeSymbolicLink])[files removeItemAtPath:maps error:nil];
-    if(![files fileExistsAtPath:maps] && symlink(bundled.fileSystemRepresentation,maps.fileSystemRepresentation))
-        host_fatal("Could not link the game maps: %s",strerror(errno));
     char reason[1024]={0};
-    if(!xiso_maps_ready(maps.fileSystemRepresentation,reason,sizeof(reason)))
-        host_fatal("This build has no usable Halo maps (%s). Rebuild with --maps pointing at maps extracted from your XISO.",reason);
-    host_logf(HOST_LOG_INFO,"maps: %s",bundled.fileSystemRepresentation);
+    for(NSString *maps in @[imported,bundled]) {
+        if(xiso_maps_ready(maps.fileSystemRepresentation,reason,sizeof(reason))) {
+            host_logf(HOST_LOG_INFO,"maps: %s",maps.fileSystemRepresentation);
+            return;
+        }
+    }
+    host_fatal("This build has no usable Halo maps (%s). Rebuild with --maps pointing at maps extracted from your XISO.",reason);
 }
