@@ -51,3 +51,36 @@ jobs:
           path: dist/Halo-CE-simulator.zip
           if-no-files-found: error
           retention-days: 14
+
+  tvos:
+    runs-on: macos-26
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - name: Toolchain
+        run: |
+          test "$(uname -m)" = arm64
+          brew install cmake ninja llvm lld sdl3 pkgconf
+          xcodebuild -version
+      # No --maps: the public build ships no game data and imports the
+      # player's XISO over the local network (port/ios/host/host_tv_import.m).
+      - name: Build unsigned Apple TV IPA
+        run: python3 tools/ios_build.py --tvos --unsigned --jobs 3 --ipa dist/Halo-CE-tvOS-unsigned.ipa
+      - name: Build ARM64 Apple TV simulator app
+        run: python3 tools/ios_build.py --tvos --simulator --jobs 3
+      - name: Archive simulator app
+        run: ditto -c -k --keepParent build/tvos/app-simulator/Release-appletvsimulator/HaloCE.app dist/Halo-CE-tvOS-simulator.zip
+      - uses: actions/upload-artifact@v4
+        with:
+          name: halo-ce-tvos-unsigned
+          path: |
+            dist/Halo-CE-tvOS-unsigned.ipa
+            dist/Halo-CE-tvOS-unsigned.ipa.sha256
+          if-no-files-found: error
+          retention-days: 14
+      - uses: actions/upload-artifact@v4
+        with:
+          name: halo-ce-tvos-simulator
+          path: dist/Halo-CE-tvOS-simulator.zip
+          if-no-files-found: error
+          retention-days: 14
