@@ -34,6 +34,8 @@ def main():
     parser.add_argument('--team', help='Apple development team ID for device signing')
     parser.add_argument('--bundle-id', help='bundle identifier covered by your signing profile (default org.haloce.ios / org.haloce.tvos)')
     parser.add_argument('--tvos', action='store_true', help='build for Apple TV instead of iPhone/iPad')
+    parser.add_argument('--render-height', type=int, default=1080,
+                        help='tvOS: internal render height in pixels, 0 for native (default 1080)')
     parser.add_argument('--maps', type=Path, help='tvOS: folder of .map files to bundle (tools/ios_extract_assets.py output/maps)')
     parser.add_argument('--ipa', type=Path, help='also package the device app at this path')
     parser.add_argument('--llvm', default='/opt/homebrew/opt/llvm')
@@ -88,7 +90,7 @@ def main():
     command=['cmake','-S','port/ios','-B',build,'-G','Xcode',f'-DCMAKE_SYSTEM_NAME={"tvOS" if args.tvos else "iOS"}',
              f'-DCMAKE_OSX_SYSROOT={sdk}','-DCMAKE_OSX_ARCHITECTURES=arm64','-DCMAKE_OSX_DEPLOYMENT_TARGET=16.0',
              f'-DHALO_BUNDLE_IDENTIFIER={args.bundle_id}', f'-DHALO_DEVELOPMENT_TEAM={args.team or ""}',
-             f'-DHALO_MAPS={args.maps.resolve() if args.maps else ""}']
+             f'-DHALO_MAPS={args.maps.resolve() if args.maps else ""}', f'-DHALO_RENDER_HEIGHT={args.render_height}']
     run(*command)
     command=['cmake','--build',build,'--config','Release','--target','HaloCE','--','-quiet']
     if args.simulator or args.unsigned:command.append('CODE_SIGNING_ALLOWED=NO')

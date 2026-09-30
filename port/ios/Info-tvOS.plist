@@ -16,6 +16,8 @@
 	<string>0.1.2</string>
 	<key>CFBundleVersion</key>
 	<string>6</string>
+	<key>HaloRenderHeight</key>
+	<string>$(HALO_RENDER_HEIGHT)</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 	<key>GCSupportedGameControllers</key>

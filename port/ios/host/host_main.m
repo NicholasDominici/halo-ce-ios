@@ -76,13 +76,19 @@ int main(int argc,char **argv) {
         snprintf(env_width,sizeof(env_width),"HALO_DISPLAY_WIDTH=%d",width);
         snprintf(env_pixel_width,sizeof(env_pixel_width),"HALO_DISPLAY_PIXEL_WIDTH=%d",pixel_width);
         snprintf(env_pixel_height,sizeof(env_pixel_height),"HALO_DISPLAY_PIXEL_HEIGHT=%d",pixel_height);
-        /* tvOS: d:\maps comes from the bundle (host_tv.m); the sandbox forbids linking it into Caches. */
-        char env_disc[1200]="HALO_DISC_ROOT=";
+        const char *env[10];size_t env_count=0;
+        env[env_count++]=env_data;env[env_count++]=env_save;env[env_count++]=env_width;
+        env[env_count++]=env_pixel_width;env[env_count++]=env_pixel_height;
 #if TARGET_OS_TV
+        /* d:\maps comes from the bundle (host_tv.m); the sandbox forbids linking it into Caches. */
+        char env_disc[1200],env_render[64];
         snprintf(env_disc,sizeof(env_disc),"HALO_DISC_ROOT=%s",NSBundle.mainBundle.resourcePath.fileSystemRepresentation);
+        env[env_count++]=env_disc;
+        /* The build chooses the render height (tools/ios_build.py --render-height). */
+        int render_height=[[NSBundle.mainBundle objectForInfoDictionaryKey:@"HaloRenderHeight"] intValue];
+        if(render_height>0){snprintf(env_render,sizeof(env_render),"HALO_RENDER_HEIGHT=%d",render_height);env[env_count++]=env_render;}
 #endif
-        const char *env[]={env_data,env_save,env_width,env_pixel_width,env_pixel_height,env_disc,"TZ=UTC0",NULL};
-        size_t env_count=sizeof(env)/sizeof(env[0]);
+        env[env_count++]="TZ=UTC0";env[env_count++]=NULL;
         uint32_t *environment=host_low_map(sizeof(uint32_t)*env_count,PROT_READ|PROT_WRITE);
         for(size_t i=0;i<env_count-1;i++)environment[i]=copy_string(env[i]);environment[env_count-1]=0;
         uint32_t *arguments=host_low_map(8,PROT_READ|PROT_WRITE);arguments[0]=copy_string("halo");arguments[1]=0;

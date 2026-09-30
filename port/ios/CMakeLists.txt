@@ -20,6 +20,9 @@ if(CMAKE_SYSTEM_NAME STREQUAL "tvOS")
     # Controllers only, no Files app: maps are bundled (HALO_MAPS), see host/host_tv.m.
     set(HALO_TVOS ON)
     set(HALO_MAPS "" CACHE PATH "Folder of .map files extracted from the user's XISO")
+    # 4K fill rate is the bottleneck in heavy fights on an Apple TV 4K (3rd gen);
+    # there's no Files app to edit config.toml, so the build picks it (0 = native).
+    set(HALO_RENDER_HEIGHT 1080 CACHE STRING "Internal render height (display.render_height)")
     set(HALO_PLATFORM_SOURCES host/host_tv.m)
     set(HALO_INFO_PLIST Info-tvOS.plist)
     set(HALO_DEVICE_FAMILY 3)
@@ -53,7 +56,8 @@ set_target_properties(HaloCE PROPERTIES MACOSX_BUNDLE_INFO_PLIST "${CMAKE_CURREN
     XCODE_ATTRIBUTE_CLANG_ENABLE_OBJC_ARC YES
     XCODE_ATTRIBUTE_PRODUCT_BUNDLE_IDENTIFIER "${HALO_BUNDLE_IDENTIFIER}"
     XCODE_ATTRIBUTE_TARGETED_DEVICE_FAMILY "${HALO_DEVICE_FAMILY}"
-    XCODE_ATTRIBUTE_CODE_SIGN_STYLE Automatic)
+    XCODE_ATTRIBUTE_CODE_SIGN_STYLE Automatic
+    XCODE_ATTRIBUTE_HALO_RENDER_HEIGHT "${HALO_RENDER_HEIGHT}")
 if(HALO_DEVELOPMENT_TEAM)
     set_target_properties(HaloCE PROPERTIES XCODE_ATTRIBUTE_DEVELOPMENT_TEAM "${HALO_DEVELOPMENT_TEAM}")
 endif()
