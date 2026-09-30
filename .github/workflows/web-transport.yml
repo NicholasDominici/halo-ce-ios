@@ -1,0 +1,50 @@
+name: Experimental web transport
+on:
+  pull_request:
+    paths: ['port/web/**', 'port/ios/host/posix_net.c', 'port/ios/CMakeLists.txt', 'tools/web_transport_build.py', 'research/web-transport/**', '.github/workflows/web-transport.yml']
+  push:
+    branches: [ios-port]
+    paths: ['port/web/**', 'port/ios/host/posix_net.c', 'tools/web_transport_build.py', 'research/web-transport/**', '.github/workflows/web-transport.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: web-transport-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  native:
+    runs-on: macos-26
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: brew install cmake ninja
+      - name: Pinned DTLS/SCTP backend and socket boundary probes
+        run: python3 tools/web_transport_build.py --platform native --jobs 3
+      - name: Sanitizers and independent frame fixtures
+        run: |
+          xcrun clang -Wall -Wextra -Werror -g -fsanitize=address,undefined -Iport/web port/web/frames.c port/web/socket_transport.c port/web/tests/socket_probe.c -o build/web/socket-sanitizer
+          build/web/socket-sanitizer
+          xcrun clang -Wall -Wextra -Werror -g -fsanitize=address,undefined -DHALO_IOS=1 -DHALO_ENABLE_WEBRTC=1 -Iport/linux/src port/ios/host/posix_net.c port/web/frames.c port/web/socket_transport.c port/web/tests/posix_probe.c -o build/web/posix-sanitizer
+          build/web/posix-sanitizer
+          node --test research/web-transport/frames.test.mjs
+  ios-probe:
+    runs-on: macos-26
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - run: brew install cmake
+      - name: Compile ARM64 device and simulator probes
+        run: |
+          python3 tools/web_transport_build.py --platform device --jobs 3
+          python3 tools/web_transport_build.py --platform simulator --jobs 3
+      - name: Archive simulator test app
+        run: ditto -c -k --keepParent build/web/simulator/Release-iphonesimulator/HaloWebProbe.app build/web/HaloWebProbe-simulator.zip
+      - uses: actions/upload-artifact@v4
+        with:
+          name: experimental-webrtc-simulator-probe
+          path: build/web/HaloWebProbe-simulator.zip
+          if-no-files-found: error
+          retention-days: 7

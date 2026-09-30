@@ -49,20 +49,51 @@ rules. An offline Node probe instantiated the fingerprinted WASM with stubbed
 host functions and checked 19 acceptance/rejection cases against its exported
 parser. It did not run the game or create a WebRTC connection. A return value
 of 1 can mean consumption followed by a drop when no listener or stream exists;
-it does not establish socket delivery. Stateful stream delivery, channel
-selection, ordering, and backpressure still need an owner-supported fixture.
+it does not establish socket delivery. Our separate local fixture below now
+checks these behaviors in our native adapter and browser peer. An owner-supported
+fixture still needs to establish the web engine's stateful socket behavior.
+
+## Native transport implementation and local evidence
+
+The optional [`port/web`](../port/web) module implements a native libdatachannel
+DTLS/SCTP backend, bounded socket queues, TCP open/data/close translation,
+UDP datagrams and mixed native/virtual `select`. Its iOS integration overrides
+the existing `posix_socket_*` guest boundary only after explicit activation;
+normal builds retain BSD sockets. A separate UIKit probe uses that exact bridge.
+
+Locally verified on September 30, 2026:
+
+| Check | Evidence / boundary |
+| --- | --- |
+| C codec and socket semantics | Address/undefined-behavior sanitizer probes, independent golden bytes, bounded queues, retry, EOF/reset, listener cleanup and UDP filtering |
+| iOS Winsock boundary | Actual exported bridge: sockaddr/endian conversion, Winsock errors, readiness, guarded detach and BSD fallback |
+| Native ↔ browser transport | Real DTLS/SCTP in Chrome, both offer roles; 1,500-byte UDP echo, ordered 250,000-byte stream, close/EOF, native-initiated reply |
+| iPad simulator ↔ browser | Same five checks through the iOS Winsock bridge, both offer roles |
+| Device target | Unsigned ARM64 probe compiles; no physical crossplay claimed |
+| Malformed WebRTC frame | Native rejection followed by peer closure; tested after a successful byte-delivery run |
+| Public WASM ingress | 19 offline parser acceptance/rejection cases, with stubbed host functions |
+
+These tests move bytes through **our** browser fixture. They do not run the web
+Halo engine or prove game session compatibility. No third-party room was joined,
+no public queue was deployed and no Cloudflare account was required. Reproduction
+commands and current resource/lifecycle limitations are in the
+[fixture README](web-transport/README.md).
+
+Remaining work includes author-confirmed socket/peer-ID allocation, supported
+native admission and ICE configuration, game-message/build/map compatibility,
+and both-engine synchronization under host/client, loss and reconnect scenarios.
 
 ## The useful collaboration boundary
 
 Our app already has the game state it needs to generate its own player's normal network actions. We do not need to scrape the browser's internal state. Genuine crossplay would carry the **game's network protocol** between the two engines.
 
-Our native transport currently supplies BSD sockets and the upstream UDP/KCP invite tunnel. That tunnel cannot be sent directly into the web port's DataChannels: the framing and connection semantics differ. Sharing a repository ancestor does not prove wire or simulation compatibility.
+Our released native transport supplies BSD sockets and the upstream UDP/KCP invite tunnel. The optional experiment supplies framed WebRTC sockets but is not wired to public room admission. That tunnel cannot be sent directly into the web port's DataChannels: the framing and connection semantics differ. Sharing a repository ancestor does not prove wire or simulation compatibility.
 
 A cooperative bridge should:
 
 1. Agree on game-message protocol version, capacity constants, serialization, map-file hashes, and deterministic simulation behavior.
 2. Confirm the inferred frame contract with the author, especially stateful connection/open/close, port mapping, stream segmentation, channel selection, ordering, and backpressure.
-3. Implement a native WebRTC transport under the existing socket abstraction. Keep the existing game action packets intact whenever the two engines agree on them.
+3. Validate the implemented native WebRTC transport against the author's stateful engine socket semantics and supported peer/stream allocation. Keep game action packets intact whenever the two engines agree on them.
 4. Have the owner admit a native client through supported room authentication and build negotiation. Turnstile is not something a native adapter should circumvent.
 5. Test host/client roles in both directions, loss/reordering, reconnects, map loading, several players, and random-seed/out-of-sync reporting.
 
