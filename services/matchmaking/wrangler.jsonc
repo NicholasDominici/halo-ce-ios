@@ -1,0 +1,7 @@
+{
+  "name": "halo-ce-matchmaking-demo",
+  "main": "src/worker.js",
+  "compatibility_date": "2026-09-28",
+  "durable_objects": {"bindings": [{"name": "MATCHMAKER", "class_name": "Matchmaker"}]},
+  "migrations": [{"tag": "v1", "new_sqlite_classes": ["Matchmaker"]}]
+}

@@ -127,6 +127,7 @@ void host_ios_touch_reset(void) {
 @property(nonatomic,strong) HaloStick *lookStick;
 @property(nonatomic,strong) NSMutableArray<HaloButton *> *buttons;
 @property(nonatomic,strong) UIButton *toggle;
+@property(nonatomic,strong) UIButton *multiplayer;
 @end
 @implementation HaloControls
 - (HaloButton *)addButton:(NSString *)title label:(NSString *)label button:(int)button axis:(int)axis {
@@ -161,9 +162,15 @@ void host_ios_touch_reset(void) {
     [self.toggle setTitleColor:UIColor.whiteColor forState:UIControlStateNormal];self.toggle.titleLabel.font=[UIFont systemFontOfSize:12];
     self.toggle.backgroundColor=[UIColor colorWithWhite:0 alpha:.3];self.toggle.layer.cornerRadius=12;
     [self.toggle addTarget:self action:@selector(toggleControls) forControlEvents:UIControlEventTouchUpInside];[self addSubview:self.toggle];
+    self.multiplayer=[UIButton buttonWithType:UIButtonTypeSystem];
+    [self.multiplayer setTitle:@"Multiplayer" forState:UIControlStateNormal];
+    [self.multiplayer setTitleColor:UIColor.whiteColor forState:UIControlStateNormal];
+    self.multiplayer.backgroundColor=[UIColor colorWithWhite:0 alpha:.4];self.multiplayer.layer.cornerRadius=12;
+    [self.multiplayer addTarget:self action:@selector(openMultiplayer) forControlEvents:UIControlEventTouchUpInside];[self addSubview:self.multiplayer];
     [[NSNotificationCenter defaultCenter]addObserver:self selector:@selector(reset) name:UIApplicationWillResignActiveNotification object:nil];
     return self;
 }
+- (void)openMultiplayer {[self reset];host_ios_matchmaking_present();}
 - (void)reset {host_ios_touch_reset();[self.moveStick reset];[self.lookStick reset];}
 - (void)toggleControls {
     [self reset];BOOL hidden=!self.moveStick.hidden;
@@ -193,6 +200,7 @@ void host_ios_touch_reset(void) {
     self.buttons[14].frame=CGRectMake(left+104,top+55,80,36);
     for(UIButton *b in self.buttons){b.layer.cornerRadius=MIN(b.bounds.size.width,b.bounds.size.height)/2;b.titleLabel.adjustsFontSizeToFitWidth=YES;}
     self.toggle.frame=CGRectMake(right-108,top,108,32);
+    self.multiplayer.frame=CGRectMake(left,top,108,32);
 }
 - (BOOL)pointInside:(CGPoint)point withEvent:(UIEvent *)event {
     for(UIView *view in self.subviews)if(!view.hidden && [view pointInside:[self convertPoint:point toView:view] withEvent:event])return YES;
@@ -209,6 +217,8 @@ void host_ios_touch_attach(SDL_Window *window) {
         if(candidate!=native && [NSStringFromClass(candidate.rootViewController.class) hasPrefix:@"SDLLaunch"])
             candidate.hidden=YES;
     }
+    extern void host_ios_matchmaking_attach(UIWindow *window);
+    host_ios_matchmaking_attach(native);
     [native makeKeyAndVisible];
     host_ios_require_landscape(native);
     UIView *root=native.rootViewController.view;

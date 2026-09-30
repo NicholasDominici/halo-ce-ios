@@ -1553,9 +1553,10 @@ static int connected_player_count(void)
 	return count;
 }
 
+static int hosting_allowed = 1;
 static void update_hosting(void)
 {
-	int want = p2p.hosting_socket >= 0;
+	int want = p2p.hosting_socket >= 0 && hosting_allowed;
 
 	if (want && !p2p.hosting)
 	{
@@ -1861,6 +1862,38 @@ static void *p2p_thread(void *unused)
 	return NULL;
 }
 
+static int explicitly_enabled;
+static unsigned long configured_local_address;
+void p2p_enable(void) {
+    explicitly_enabled=1;
+    p2p_initialize(configured_local_address ? configured_local_address : network_long(0x7F000001));
+}
+void p2p_matchmaking_begin(int online) {
+    int index;
+    if(online)p2p_enable();
+    if(!p2p.running)return;
+    pthread_mutex_lock(&p2p_lock);
+    p2p_signal_stop_hosting();p2p_signal_stop_joining();
+    for(index=0;index<P2P_MAXIMUM_PEERS;index++)
+        if(p2p.peers[index].used)drop_peer(&p2p.peers[index],"match ended");
+    hosting_allowed=online;
+    p2p.hosting=0;p2p.hosting_socket=-1;p2p.joining=0;p2p.join_requested=0;
+    p2p.has_token=0;p2p.invite[0]=0;p2p.invite_copied=0;p2p.has_clipboard=0;
+    pthread_mutex_unlock(&p2p_lock);
+}
+int p2p_copy_invite(char *text,unsigned int size) {
+    int found=0;
+    if(!text || !size)return 0;
+    text[0]=0;
+    if(!p2p.running)return 0;
+    pthread_mutex_lock(&p2p_lock);
+    if(p2p.hosting && p2p.invite[0]) {
+        snprintf(text,size,"%s",p2p.invite);found=1;
+    }
+    pthread_mutex_unlock(&p2p_lock);
+    return found;
+}
+
 void p2p_initialize(unsigned long local_address)
 {
 	char invite[256];
@@ -1868,7 +1901,8 @@ void p2p_initialize(unsigned long local_address)
 	int index;
 
 	p2p_identifier();
-	if (p2p.running || !config_boolean("network.online"))
+	configured_local_address = local_address;
+	if (p2p.running || (!explicitly_enabled && !config_boolean("network.online")))
 		return;
 	for (index = 0; index < MAXIMUM_PROXIES; index++)
 		p2p.proxies[index].socket = -1;

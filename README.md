@@ -66,6 +66,27 @@ you delete the app.
 
 Tap **Hide controls** for a clean screen, and **Show controls** to bring them back.
 
+## Matchmaking demo (development branch)
+
+The `matchmaking-demo` branch adds a **Multiplayer** button. At Halo’s main menu,
+choose **Practice with bots** to play eight-player Blood Gulch Slayer locally,
+with seven host-controlled bots. They use Halo’s normal movement, weapons,
+damage, respawn, and scoring. Their behavior is basic; they do not use vehicles
+or plan routes around the whole map.
+
+For real players, deploy [the matchmaking service](services/matchmaking/README.md)
+and enter its HTTPS URL on each device, then choose **Find match**. Compatible
+clients queue together for 20 seconds. The first device hosts; the host fills
+remaining seats with bots based on players that actually joined Halo. Use
+**Back to Halo** once the match starts, or **Cancel search / leave match** to
+return to the menu before starting another search.
+
+This is an early demo. There is no public default endpoint, ranked matching,
+host migration, or relay for restrictive NAT. Clients need matching map data.
+Matchmaking coordinates our native clients; it does not connect to the web port.
+[Crossplay research](research/web-crossplay.md) records the public web transport
+and the integration work needed with its author.
+
 ## Display settings
 
 Halo runs at native display resolution by default and stays in landscape on

@@ -1,0 +1,38 @@
+name: Matchmaking service
+on:
+  push:
+    branches: [ios-port]
+    paths: ['services/matchmaking/**', 'research/web-transport/**', '.github/workflows/matchmaking.yml']
+  pull_request:
+    branches: [ios-port]
+    paths: ['services/matchmaking/**', 'research/web-transport/**', '.github/workflows/matchmaking.yml']
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    defaults:
+      run:
+        working-directory: services/matchmaking
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: services/matchmaking/package-lock.json
+      - run: npm ci
+      - run: npm test
+      - run: node --test ../../research/web-transport/frames.test.mjs
+      - run: npx wrangler deploy --dry-run
+      - name: Worker HTTP integration
+        run: |
+          npx wrangler dev --port 8787 --ip 127.0.0.1 > /tmp/halo-matchmaking-worker.log 2>&1 &
+          worker_pid=$!
+          trap 'kill "$worker_pid"; cat /tmp/halo-matchmaking-worker.log' EXIT
+          for attempt in $(seq 1 60); do
+            if curl --fail --silent http://127.0.0.1:8787/health >/dev/null; then break; fi
+            sleep 1
+          done
+          MATCHMAKING_TEST_EXPIRY=1 node test/http.integration.js

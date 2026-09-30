@@ -800,6 +800,46 @@ static void network_game_server_dump(
 struct network_game_server network_game_server_memory_do_not_use_directly;
 boolean network_game_server_memory_do_not_use_directly_in_use = FALSE;
 
+#ifdef HALO_IOS
+#include "../../port/ios/matchmaking.h"
+int halo_ios_server_player_count(void *opaque) {
+    struct network_game_server *server=opaque;
+    return server ? server->game.player_count : 0;
+}
+void halo_ios_server_match_limit(void *opaque) {
+    struct network_game_server *server=opaque;
+    if(server && server->state==0)server->game.maximum_players=8;
+}
+int halo_ios_server_fill_bots(void *opaque,int target) {
+    struct network_game_server *server=opaque;
+    int machine,count=0;
+    if(!server || server->state!=0)return 0;
+    for(machine=MAXIMUM_NETWORK_MACHINE_COUNT-1;machine>0 && server->game.player_count<target;machine--) {
+        struct network_player player;
+        int i;
+        char name[12];
+        if(server->game.machines[machine].machine_index!=NONE ||
+           server->client_machines[machine].machine_index!=NONE)continue;
+        network_game_invalidate_player(&player);
+        csprintf(name,"BOT-%02d",count+1);
+        for(i=0;name[i] && i<11;i++)player.name[i]=(wchar_t)name[i];
+        player.name[i]=0;player.machine_index=(char)machine;
+        player.controller_index=0;player.team_index=(char)(count%2);
+        player.primary_color_index=(short)(count+2);player.icon_index=0;
+        if(network_game_add_player(&server->game,&player)) {
+            struct network_machine *entry=&server->game.machines[machine];
+            csmemset(entry,0,sizeof(*entry));entry->machine_index=(char)machine;
+            ustrncpy(entry->name,player.name,31);
+            server->game.machine_count++;count++;
+            halo_ios_bot_machine_set(machine,TRUE);
+        }
+    }
+    network_event("matchmaking: filled %d empty seats with host-owned bots",count);
+    if(count)network_game_server_send_game_data_pregame(server);
+    return count;
+}
+#endif
+
 /* ---------- public code */
 
 struct network_game_server *network_game_server_create(
@@ -1786,6 +1826,9 @@ void network_game_server_update_ticks(
 				long update_number = server->next_update_number++;
 				void *message;
 
+#ifdef HALO_IOS
+				halo_ios_bot_actions();
+#endif
 				update_server_next_update();
 				update_server_build_server_update(NONE, &update, &update_number);
 
@@ -2083,6 +2126,13 @@ boolean server_has_enough_machines(
 	}
 
 	has_enough_machines = machine_count >= minimum_machine_count;
+#ifdef HALO_IOS
+    /* Practice bots are real simulation players without network connections. */
+    if(!has_enough_machines && machine_count>0) {
+        for(client_machine_index=1;client_machine_index<MAXIMUM_NETWORK_MACHINE_COUNT;client_machine_index++)
+            if(halo_ios_bot_machine(client_machine_index)){has_enough_machines=TRUE;break;}
+    }
+#endif
 
 	return has_enough_machines;
 }

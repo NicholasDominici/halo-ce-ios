@@ -36,5 +36,9 @@ run('xcrun', 'clang', '-O2', '-fsanitize=address,undefined', '-Iport/linux/src',
     'port/ios/tests/display_probe.c', '-o', BUILD/'display-probe')
 run(BUILD/'display-probe')
 
+run('xcrun','clang','-O2','-DHALO_IOS=1','-Iport/linux/src',
+    'port/ios/tests/network_probe.c','port/ios/host/posix_net.c','-o',BUILD/'network-probe')
+run(BUILD/'network-probe')
+
 # Parse untrusted XISO metadata and exercise extraction/cancellation under sanitizers.
 run('python3', 'tools/ios_xiso_test.py')

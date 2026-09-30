@@ -54,3 +54,6 @@ dist/
 *.map
 *.xcuserstate
 xcuserdata/
+node_modules/
+.wrangler/
+.dev.vars

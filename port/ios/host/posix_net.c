@@ -43,7 +43,22 @@ static int ios_accept4(int fd,void *p,socklen_t *n,int flags) {
     (void)flags;int out=accept(fd,p,n);if(out>=0){fcntl(out,F_SETFD,FD_CLOEXEC);if(n)sockaddr_outward(p,*n);}return out;
 }
 static ssize_t ios_sendto(int fd,const void *p,size_t n,int flags,const void *address,socklen_t size) {
-    struct sockaddr_storage a=sockaddr_inward(address,size);return sendto(fd,p,n,flags,(struct sockaddr *)&a,size);
+    struct sockaddr_storage a=sockaddr_inward(address,size);
+    ssize_t out=sendto(fd,p,n,flags,(struct sockaddr *)&a,size);
+    /* Darwin rejects a destination on a connected datagram socket. Winsock
+       accepts it. Use send only when the requested destination is the peer;
+       never silently redirect a datagram meant for a different endpoint. */
+    if(out<0 && errno==EISCONN && a.ss_family==AF_INET && size>=sizeof(struct sockaddr_in)) {
+        struct sockaddr_in peer; socklen_t peer_size=sizeof(peer);
+        int type=0; socklen_t type_size=sizeof(type);
+        const struct sockaddr_in *target=(const struct sockaddr_in *)&a;
+        if(!getsockopt(fd,SOL_SOCKET,SO_TYPE,&type,&type_size) && type==SOCK_DGRAM &&
+           !getpeername(fd,(struct sockaddr *)&peer,&peer_size) && peer.sin_family==AF_INET &&
+           peer.sin_addr.s_addr==target->sin_addr.s_addr && peer.sin_port==target->sin_port)
+            out=send(fd,p,n,flags);
+        else errno=EISCONN;
+    }
+    return out;
 }
 static ssize_t ios_recvfrom(int fd,void *p,size_t n,int flags,void *address,socklen_t *size) {
     ssize_t out=recvfrom(fd,p,n,flags,address,size);if(out>=0 && size)sockaddr_outward(address,*size);return out;

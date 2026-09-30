@@ -1,0 +1,7 @@
+{
+  "name": "halo-ce-matchmaking-demo",
+  "private": true,
+  "type": "module",
+  "scripts": {"dev": "wrangler dev", "deploy": "wrangler deploy", "test": "node --test test/*.test.js"},
+  "devDependencies": {"wrangler": "4.144.0"}
+}

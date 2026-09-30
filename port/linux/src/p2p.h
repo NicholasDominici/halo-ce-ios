@@ -16,6 +16,12 @@ Addresses and ports are in network byte order.
 its networking; local_address is the address the game's sockets are
 reached at (network.address, else 127.0.0.1) */
 void p2p_initialize(unsigned long local_address);
+/* Explicit matchmaking opt-in; leaves the persisted network setting alone. */
+void p2p_enable(void);
+/* Start a fresh demo session, dropping old peers and rotating its invite.
+   Zero stops advertising, including when practice follows an online match. */
+void p2p_matchmaking_begin(int online);
+int p2p_copy_invite(char *text, unsigned int size);
 
 /* on the desktop, before anything else: if this process was started with
 an invite link (halo://join/...) and another copy of the game is running,

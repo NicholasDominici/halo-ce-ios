@@ -108,6 +108,11 @@ embedding the compiled code into the iOS app.
 ## Still unverified
 
 Extended physical iPad gameplay, older iPhones/iOS versions, a complete campaign,
-physical controllers, network multiplayer, audio route changes/headphones,
+physical controllers, physical-device network multiplayer, audio route changes/headphones,
 and prolonged background/resume behavior. PAL maps are accepted by the cache
 validator but have not been played on iOS. Bink intro videos are unsupported.
+
+## Matchmaking demo, build 7
+
+See [the demo validation](MATCHMAKING.md) for simulator multiplayer, bot
+replication, Worker tests, device installation, and remaining live checks.
