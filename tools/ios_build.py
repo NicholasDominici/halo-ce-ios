@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build the iPhone/iPad app from source on an Apple Silicon Mac."""
+"""Build the iPhone/iPad (or, with --tvos, Apple TV) app from source on an Apple Silicon Mac."""
 import argparse
 import os
 import platform
@@ -32,7 +32,10 @@ def main():
     mode.add_argument('--simulator', action='store_true', help='build for an ARM64 simulator')
     mode.add_argument('--unsigned', action='store_true', help='build a device app for signing later')
     parser.add_argument('--team', help='Apple development team ID for device signing')
-    parser.add_argument('--bundle-id', default='org.haloce.ios', help='bundle identifier covered by your signing profile')
+    parser.add_argument('--bundle-id', help='bundle identifier covered by your signing profile (default org.haloce.ios / org.haloce.tvos)')
+    parser.add_argument('--tvos', action='store_true', help='build for Apple TV instead of iPhone/iPad')
+    parser.add_argument('--render-height', type=int, default=1080,
+                        help='tvOS: internal render height in pixels, 0 for native (default 1080)')
     parser.add_argument('--ipa', type=Path, help='also package the device app at this path')
     parser.add_argument('--llvm', default='/opt/homebrew/opt/llvm')
     parser.add_argument('--lld', default='/opt/homebrew/opt/lld/bin/ld.lld')
@@ -46,6 +49,7 @@ def main():
         parser.error('--team is only used for signed device builds')
     if args.ipa and args.simulator:
         parser.error('--ipa requires a device build')
+    args.bundle_id = args.bundle_id or ('org.haloce.tvos' if args.tvos else 'org.haloce.ios')
     if not re.fullmatch(r'[A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)+', args.bundle_id):
         parser.error('--bundle-id must be a reverse-DNS identifier (e.g. com.example.halo)')
     if args.jobs < 1:
@@ -72,12 +76,14 @@ def main():
         ('port/third_party/tomlc17/LICENSE', 'tomlc17.txt'),
     ):
         shutil.copyfile(ROOT/source, notices/name)
-    build=ROOT/('build/ios/app-simulator' if args.simulator else
-                'build/ios/app-unsigned' if args.unsigned else 'build/ios/app-device')
-    sdk='iphonesimulator' if args.simulator else 'iphoneos'
-    command=['cmake','-S','port/ios','-B',build,'-G','Xcode','-DCMAKE_SYSTEM_NAME=iOS',
+    build=ROOT/'build'/('tvos' if args.tvos else 'ios')/('app-simulator' if args.simulator else
+                'app-unsigned' if args.unsigned else 'app-device')
+    if args.tvos: sdk='appletvsimulator' if args.simulator else 'appletvos'
+    else: sdk='iphonesimulator' if args.simulator else 'iphoneos'
+    command=['cmake','-S','port/ios','-B',build,'-G','Xcode',f'-DCMAKE_SYSTEM_NAME={"tvOS" if args.tvos else "iOS"}',
              f'-DCMAKE_OSX_SYSROOT={sdk}','-DCMAKE_OSX_ARCHITECTURES=arm64','-DCMAKE_OSX_DEPLOYMENT_TARGET=16.0',
-             f'-DHALO_BUNDLE_IDENTIFIER={args.bundle_id}', f'-DHALO_DEVELOPMENT_TEAM={args.team or ""}']
+             f'-DHALO_BUNDLE_IDENTIFIER={args.bundle_id}', f'-DHALO_DEVELOPMENT_TEAM={args.team or ""}',
+             f'-DHALO_RENDER_HEIGHT={args.render_height}']
     run(*command)
     command=['cmake','--build',build,'--config','Release','--target','HaloCE','--','-quiet']
     if args.simulator or args.unsigned:command.append('CODE_SIGNING_ALLOWED=NO')

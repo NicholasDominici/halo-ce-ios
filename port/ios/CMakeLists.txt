@@ -9,9 +9,32 @@ set(SDL_TEST_LIBRARY OFF CACHE BOOL "" FORCE)
 set(SDL_TESTS OFF CACHE BOOL "" FORCE)
 set(SDL_EXAMPLES OFF CACHE BOOL "" FORCE)
 add_subdirectory("${ROOT}/build/third_party/SDL3" sdl3 EXCLUDE_FROM_ALL)
+if(CMAKE_SYSTEM_NAME STREQUAL "tvOS")
+    # SDL's CMake forces SDL_OPENGLES off for tvOS, but its UIKit GL ES code is
+    # shared with iOS and tvOS still ships OpenGLES.framework (SDL's own Xcode
+    # config, SDL_build_config_ios.h, enables it). The sources are always
+    # compiled; only these macros gate them.
+    target_compile_definitions(SDL3-static PRIVATE SDL_VIDEO_OPENGL_ES=1 SDL_VIDEO_OPENGL_ES2=1)
+endif()
+if(CMAKE_SYSTEM_NAME STREQUAL "tvOS")
+    # Controllers only, no Files app: the XISO arrives from a browser
+    # (host/host_tv_import.m).
+    set(HALO_TVOS ON)
+    # 4K fill rate is the bottleneck in heavy fights on an Apple TV 4K (3rd gen);
+    # there's no Files app to edit config.toml, so the build picks it (0 = native).
+    set(HALO_RENDER_HEIGHT 1080 CACHE STRING "Internal render height (display.render_height)")
+    # Brand assets (layered icon, top shelf) made from the iOS AppIcon artwork.
+    set(HALO_PLATFORM_SOURCES Assets-tvOS.xcassets host/host_tv.m host/host_tv_import.m)
+    set(HALO_INFO_PLIST Info-tvOS.plist)
+    set(HALO_DEVICE_FAMILY 3)
+else()
+    set(HALO_PLATFORM_SOURCES Assets.xcassets host/host_import.m host/host_orientation.m host/host_touch.m)
+    set(HALO_INFO_PLIST Info.plist)
+    set(HALO_DEVICE_FAMILY "1,2")
+endif()
 add_executable(HaloCE MACOSX_BUNDLE
-    Assets.xcassets "${ROOT}/port/runtime/xiso.c"
-    host/host_main.m host/host_import.m host/host_orientation.m host/host_touch.m host/host_memory.c host/host_loader.c host/host_syscall.c host/host_gl.c host/guest_call.S
+    ${HALO_PLATFORM_SOURCES} "${ROOT}/port/runtime/xiso.c"
+    host/host_main.m host/host_memory.c host/host_loader.c host/host_syscall.c host/host_gl.c host/guest_call.S
     host/host_thread.c host/host_sdl.c
     "${ROOT}/port/linux/src/posix_files.c" host/posix_net.c
     "${ROOT}/build/ios/host/bridges.c" "${ROOT}/build/ios/embedded/guest_image.S")
@@ -21,17 +44,24 @@ target_include_directories(HaloCE PRIVATE host "${ROOT}/port/runtime" "${ROOT}/p
 target_compile_definitions(HaloCE PRIVATE HALO_IOS=1 st_mtim=st_mtimespec st_atim=st_atimespec st_ctim=st_ctimespec)
 target_compile_options(HaloCE PRIVATE -Wno-deprecated-declarations)
 target_compile_options(HaloCE PRIVATE "$<$<COMPILE_LANGUAGE:OBJC>:-fobjc-arc>")
-target_link_libraries(HaloCE PRIVATE SDL3::SDL3-static "-framework Foundation" "-framework UIKit" "-framework UniformTypeIdentifiers" "-framework OpenGLES")
-set_source_files_properties(Assets.xcassets PROPERTIES MACOSX_PACKAGE_LOCATION Resources)
+target_link_libraries(HaloCE PRIVATE SDL3::SDL3-static "-framework Foundation" "-framework UIKit" "-framework OpenGLES")
+if(HALO_TVOS)
+    target_link_libraries(HaloCE PRIVATE "-framework Network" "-framework CoreImage")
+    set_source_files_properties(Assets-tvOS.xcassets PROPERTIES MACOSX_PACKAGE_LOCATION Resources)
+else()
+    target_link_libraries(HaloCE PRIVATE "-framework UniformTypeIdentifiers")
+    set_source_files_properties(Assets.xcassets PROPERTIES MACOSX_PACKAGE_LOCATION Resources)
+endif()
+set_target_properties(HaloCE PROPERTIES XCODE_ATTRIBUTE_ASSETCATALOG_COMPILER_APPICON_NAME "AppIcon")
 file(GLOB HALO_LICENSES "${ROOT}/build/ios/licenses/*.txt")
 target_sources(HaloCE PRIVATE ${HALO_LICENSES})
 set_source_files_properties(${HALO_LICENSES} PROPERTIES MACOSX_PACKAGE_LOCATION Resources/Licenses)
-set_target_properties(HaloCE PROPERTIES MACOSX_BUNDLE_INFO_PLIST "${CMAKE_CURRENT_SOURCE_DIR}/Info.plist"
+set_target_properties(HaloCE PROPERTIES MACOSX_BUNDLE_INFO_PLIST "${CMAKE_CURRENT_SOURCE_DIR}/${HALO_INFO_PLIST}"
     XCODE_ATTRIBUTE_CLANG_ENABLE_OBJC_ARC YES
-    XCODE_ATTRIBUTE_ASSETCATALOG_COMPILER_APPICON_NAME "AppIcon"
     XCODE_ATTRIBUTE_PRODUCT_BUNDLE_IDENTIFIER "${HALO_BUNDLE_IDENTIFIER}"
-    XCODE_ATTRIBUTE_TARGETED_DEVICE_FAMILY "1,2"
-    XCODE_ATTRIBUTE_CODE_SIGN_STYLE Automatic)
+    XCODE_ATTRIBUTE_TARGETED_DEVICE_FAMILY "${HALO_DEVICE_FAMILY}"
+    XCODE_ATTRIBUTE_CODE_SIGN_STYLE Automatic
+    XCODE_ATTRIBUTE_HALO_RENDER_HEIGHT "${HALO_RENDER_HEIGHT}")
 if(HALO_DEVELOPMENT_TEAM)
     set_target_properties(HaloCE PROPERTIES XCODE_ATTRIBUTE_DEVELOPMENT_TEAM "${HALO_DEVELOPMENT_TEAM}")
 endif()

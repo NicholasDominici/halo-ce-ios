@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Package a built iPhone/iPad app and write its SHA-256 checksum."""
+"""Package a built iPhone/iPad or Apple TV app and write its SHA-256 checksum."""
 import argparse
 import hashlib
 from pathlib import Path
@@ -12,8 +12,8 @@ def package(app, output, require_unsigned=False):
     app = app.resolve()
     with (app/'Info.plist').open('rb') as file:
         info = plistlib.load(file)
-    if info.get('CFBundleSupportedPlatforms') != ['iPhoneOS']:
-        raise ValueError('Only an iPhoneOS device app can be packaged as an IPA')
+    if info.get('CFBundleSupportedPlatforms') not in (['iPhoneOS'], ['AppleTVOS']):
+        raise ValueError('Only an iPhoneOS or AppleTVOS device app can be packaged as an IPA')
     if info.get('CFBundleExecutable') != 'HaloCE' or not (app/'HaloCE').is_file():
         raise ValueError('Not a complete HaloCE.app')
     files = sorted(p for p in app.rglob('*') if p.is_file())
