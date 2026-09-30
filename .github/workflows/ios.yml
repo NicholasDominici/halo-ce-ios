@@ -62,8 +62,8 @@ jobs:
           test "$(uname -m)" = arm64
           brew install cmake ninja llvm lld sdl3 pkgconf
           xcodebuild -version
-      # No --maps: the public build ships no game data and imports the
-      # player's XISO over the local network (port/ios/host/host_tv_import.m).
+      # Like iOS, the app ships no game data: it imports the player's XISO
+      # over the local network (port/ios/host/host_tv_import.m).
       - name: Build unsigned Apple TV IPA
         run: python3 tools/ios_build.py --tvos --unsigned --jobs 3 --ipa dist/Halo-CE-tvOS-unsigned.ipa
       - name: Build ARM64 Apple TV simulator app

@@ -18,9 +18,8 @@ if(CMAKE_SYSTEM_NAME STREQUAL "tvOS")
 endif()
 if(CMAKE_SYSTEM_NAME STREQUAL "tvOS")
     # Controllers only, no Files app: the XISO arrives from a browser
-    # (host/host_tv_import.m); a personal build may bundle maps instead (HALO_MAPS).
+    # (host/host_tv_import.m).
     set(HALO_TVOS ON)
-    set(HALO_MAPS "" CACHE PATH "Folder of .map files extracted from the user's XISO")
     # 4K fill rate is the bottleneck in heavy fights on an Apple TV 4K (3rd gen);
     # there's no Files app to edit config.toml, so the build picks it (0 = native).
     set(HALO_RENDER_HEIGHT 1080 CACHE STRING "Internal render height (display.render_height)")
@@ -47,6 +46,7 @@ target_compile_options(HaloCE PRIVATE -Wno-deprecated-declarations)
 target_compile_options(HaloCE PRIVATE "$<$<COMPILE_LANGUAGE:OBJC>:-fobjc-arc>")
 target_link_libraries(HaloCE PRIVATE SDL3::SDL3-static "-framework Foundation" "-framework UIKit" "-framework OpenGLES")
 if(HALO_TVOS)
+    target_link_libraries(HaloCE PRIVATE "-framework Network" "-framework CoreImage")
     set_source_files_properties(Assets-tvOS.xcassets PROPERTIES MACOSX_PACKAGE_LOCATION Resources)
 else()
     target_link_libraries(HaloCE PRIVATE "-framework UniformTypeIdentifiers")
@@ -64,14 +64,4 @@ set_target_properties(HaloCE PROPERTIES MACOSX_BUNDLE_INFO_PLIST "${CMAKE_CURREN
     XCODE_ATTRIBUTE_HALO_RENDER_HEIGHT "${HALO_RENDER_HEIGHT}")
 if(HALO_DEVELOPMENT_TEAM)
     set_target_properties(HaloCE PROPERTIES XCODE_ATTRIBUTE_DEVELOPMENT_TEAM "${HALO_DEVELOPMENT_TEAM}")
-endif()
-if(HALO_TVOS)
-    target_link_libraries(HaloCE PRIVATE "-framework Network" "-framework CoreImage")
-    # APFS clone (cp -c): copying the ~1.7 GB of maps costs no time or space.
-    # An earlier personal build's maps are always removed, so a build without
-    # HALO_MAPS never ships game data.
-    # Xcode's own variables name the bundle; the generator path contains an unexpanded ${EFFECTIVE_PLATFORM_NAME}.
-    add_custom_command(TARGET HaloCE POST_BUILD
-        COMMAND sh -c "rm -rf \"$TARGET_BUILD_DIR/$WRAPPER_NAME/maps\" && if [ -n \"$0\" ]; then cp -Rc \"$0\" \"$TARGET_BUILD_DIR/$WRAPPER_NAME/maps\"; fi" "${HALO_MAPS}"
-        VERBATIM)
 endif()

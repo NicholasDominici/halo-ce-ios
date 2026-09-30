@@ -116,22 +116,12 @@ int host_ios_gamepad_button(SDL_Gamepad *pad,int button) {
 }
 
 /* The player's XISO is imported into root/maps over the local network
-   (host_tv_import.m). A personal build can instead bundle the maps, which
-   host_main.m hands the game as HALO_DISC_ROOT; tvOS forbids symlinking them
-   into Caches. A complete root/maps takes precedence, matching
-   platform_translate_path in port/linux/src/xbox_files.c. */
+   (host_tv_import.m). */
 void host_ios_prepare_assets(const char *root) {
     NSString *imported=[[NSString stringWithUTF8String:root] stringByAppendingPathComponent:@"maps"];
-    NSString *bundled=[NSBundle.mainBundle.resourcePath stringByAppendingPathComponent:@"maps"];
     char reason[1024]={0};
-    for(NSString *maps in @[imported,bundled]) {
-        if(xiso_maps_ready(maps.fileSystemRepresentation,reason,sizeof(reason))) {
-            host_logf(HOST_LOG_INFO,"maps: %s",maps.fileSystemRepresentation);
-            return;
-        }
-    }
-    /* Caches is purgeable, so this also runs again if tvOS evicted the maps. */
-    host_tv_import(root);
+    /* Caches is purgeable, so the import runs again if tvOS evicted the maps. */
+    if(!xiso_maps_ready(imported.fileSystemRepresentation,NULL,0))host_tv_import(root);
     if(!xiso_maps_ready(imported.fileSystemRepresentation,reason,sizeof(reason)))
         host_fatal("The imported maps are not usable (%s).",reason);
     host_logf(HOST_LOG_INFO,"maps: %s",imported.fileSystemRepresentation);

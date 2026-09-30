@@ -41,7 +41,7 @@ int main(int argc,char **argv) {
     (void)argc;(void)argv;
     @autoreleasepool {
 #if TARGET_OS_TV
-        /* tvOS apps may only write to Caches (purgeable); the maps stay in the bundle. */
+        /* tvOS apps may only write to Caches (purgeable). */
         NSString *documents=[NSSearchPathForDirectoriesInDomains(NSCachesDirectory,NSUserDomainMask,YES).firstObject stringByAppendingPathComponent:@"Halo"];
         [NSFileManager.defaultManager createDirectoryAtPath:documents withIntermediateDirectories:YES attributes:nil error:nil];
 #else
@@ -80,10 +80,7 @@ int main(int argc,char **argv) {
         env[env_count++]=env_data;env[env_count++]=env_save;env[env_count++]=env_width;
         env[env_count++]=env_pixel_width;env[env_count++]=env_pixel_height;
 #if TARGET_OS_TV
-        /* d:\maps comes from the bundle (host_tv.m); the sandbox forbids linking it into Caches. */
-        char env_disc[1200],env_render[64];
-        snprintf(env_disc,sizeof(env_disc),"HALO_DISC_ROOT=%s",NSBundle.mainBundle.resourcePath.fileSystemRepresentation);
-        env[env_count++]=env_disc;
+        char env_render[64];
         /* The build chooses the render height (tools/ios_build.py --render-height). */
         int render_height=[[NSBundle.mainBundle objectForInfoDictionaryKey:@"HaloRenderHeight"] intValue];
         if(render_height>0){snprintf(env_render,sizeof(env_render),"HALO_RENDER_HEIGHT=%d",render_height);env[env_count++]=env_render;}
