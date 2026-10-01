@@ -3515,8 +3515,16 @@ void WINAPI D3DDevice_Clear(DWORD count, CONST D3DRECT *rectangles, DWORD flags,
 		return;
 	if (!count || !rectangles)
 	{
-		glDisable(GL_SCISSOR_TEST);
+		/* Direct3D clears only the viewport, not the whole target: in split
+		screen each player's view clears its own half of the back buffer */
+		GLint x0 = target_pixel((float)device.viewport.X, 0);
+		GLint y0 = target_pixel((float)device.viewport.Y, 1);
+
+		glEnable(GL_SCISSOR_TEST);
+		glScissor(x0, y0, target_pixel((float)(device.viewport.X + device.viewport.Width), 0) - x0,
+			target_pixel((float)(device.viewport.Y + device.viewport.Height), 1) - y0);
 		glClear(mask);
+		glDisable(GL_SCISSOR_TEST);
 		xgpu_gl_state_invalidate();
 		return;
 	}
